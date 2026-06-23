@@ -227,7 +227,6 @@
         <label class="fld">結束日期<input type="text" id="m_end" placeholder="2026-08-12 04:59"></label>
         <label class="fld">ID<input type="text" id="m_id"></label>
         <label class="fld">順位<input type="text" id="m_order"></label>
-        <label class="fld wide">圖素（圖片公告用）<input type="text" id="m_asset" placeholder="https://…"></label>
         <div class="checks">
           <label><input type="checkbox" id="m_live"> 已上正式服</label>
           <label><input type="checkbox" id="m_test"> 測試服公告</label>
@@ -331,9 +330,13 @@ function statsOf(raw){
   return {chars:raw.length, segs:segs.length, imgs:segs.filter(s=>s.startsWith('http://')||s.startsWith('https://')).length};
 }
 function effectiveSource(it){
-  if(it['內文']&&it['內文'].trim()) return it['內文'];
-  if(it['圖素']&&it['圖素'].trim()) return it['圖素'].trim();
-  return '';
+  let src=it['內文']||'';
+  const asset=(it['圖素']||'').trim();
+  // 圖素併入公告內容：內文有字就接在後面（以 #|# 分段），否則直接當純圖片公告
+  if(asset && src.indexOf(asset)===-1){
+    src = src.trim() ? src.replace(/\s+$/,'')+'#|#'+asset : asset;
+  }
+  return src;
 }
 function isTrue(v){return v===true||v==='True'||v==='TRUE'||v===1;}
 
@@ -354,12 +357,20 @@ function saveData(){ try{ localStorage.setItem(DATA_KEY, JSON.stringify(DATA)); 
 function monthByName(n){ return DATA.find(m=>m.month===n); }
 
 /* ============ 分頁切換 ============ */
+function activateView(v){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
+  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
+  if(v==='templates') renderTplList();
+}
 document.querySelectorAll('.tab').forEach(tab=>{
   tab.addEventListener('click',()=>{
     const v=tab.dataset.view;
-    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t===tab));
-    document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
-    if(v==='templates') renderTplList();
+    // 點「編輯公告」時，若歷史公告已選取一則、且編輯區尚未在編輯它，就載入那一則
+    if(v==='editor' && arcSel && (!editingRef || editingRef.month!==arcSel.month || editingRef.idx!==arcSel.idx)){
+      const m=monthByName(arcSel.month);
+      if(m && m.items[arcSel.idx]) populateEditor(arcSel.month,arcSel.idx);
+    }
+    activateView(v);
   });
 });
 document.getElementById('navNew').addEventListener('click',()=>newAnnouncement());
@@ -497,7 +508,7 @@ let editingRef=null; // {month, idx} 或 null=新公告
 function val(id){return document.getElementById(id).value;}
 function getItem(){
   return {'發布日期':val('m_start'),'結束日期':val('m_end'),'標題':val('m_title'),'頁籤':val('m_tab'),
-    '內文':edSource.value,'圖素':val('m_asset'),'連結':val('m_link'),'ＩＤ':val('m_id'),'順位':val('m_order'),
+    '內文':edSource.value,'圖素':'','連結':val('m_link'),'ＩＤ':val('m_id'),'順位':val('m_order'),
     '已上正式服':document.getElementById('m_live').checked,'測試服公告':document.getElementById('m_test').checked};
 }
 function setItem(it){
@@ -508,10 +519,9 @@ function setItem(it){
   document.getElementById('m_end').value=it['結束日期']||'';
   document.getElementById('m_id').value=it['ＩＤ']||'';
   document.getElementById('m_order').value=it['順位']||'';
-  document.getElementById('m_asset').value=it['圖素']||'';
   document.getElementById('m_live').checked=isTrue(it['已上正式服']);
   document.getElementById('m_test').checked=isTrue(it['測試服公告']);
-  edSource.value=it['內文']!==undefined?it['內文']:effectiveSource(it);
+  edSource.value=effectiveSource(it); // 圖素已併入公告內容一起顯示
 }
 function setMode(){
   const el=document.getElementById('edMode'), btn=document.getElementById('edSave');
@@ -527,17 +537,20 @@ function edRender(){
   setMode();
 }
 edSource.addEventListener('input',edRender);
-['m_title','m_tab','m_link','m_start','m_end','m_id','m_order','m_asset'].forEach(id=>document.getElementById(id).addEventListener('input',edRender));
+['m_title','m_tab','m_link','m_start','m_end','m_id','m_order'].forEach(id=>document.getElementById(id).addEventListener('input',edRender));
 
-function loadIntoEditor(month,idx){
+function populateEditor(month,idx){
   const it=monthByName(month).items[idx];
   editingRef={month,idx}; setItem(it);
   document.getElementById('m_month').value=month;
-  edRender(); document.querySelector('.tab[data-view="editor"]').click();
+  edRender();
+}
+function loadIntoEditor(month,idx){
+  arcSel={month,idx}; populateEditor(month,idx); renderArcList(); activateView('editor');
 }
 function newAnnouncement(month){
-  editingRef=null; setItem({}); if(month) document.getElementById('m_month').value=month;
-  edRender(); document.querySelector('.tab[data-view="editor"]').click();
+  arcSel=null; editingRef=null; setItem({}); if(month) document.getElementById('m_month').value=month;
+  edRender(); renderArcList(); activateView('editor');
 }
 document.getElementById('m_month').addEventListener('change',e=>{
   if(e.target.value==='__new__'){
@@ -615,8 +628,8 @@ function renderTplList(){
 }
 function applyTemplate(t){
   if(edSource.value.trim()&&!confirm('用樣板覆蓋目前編輯內容？')) return;
-  editingRef=null; setItem({'頁籤':t.meta&&t.meta['頁籤'],'連結':t.meta&&t.meta['連結'],'內文':t.source||''});
-  edRender(); document.querySelector('.tab[data-view="editor"]').click();
+  arcSel=null; editingRef=null; setItem({'頁籤':t.meta&&t.meta['頁籤'],'連結':t.meta&&t.meta['連結'],'內文':t.source||''});
+  edRender(); renderArcList(); activateView('editor');
 }
 function refreshTplPicker(){
   const sel=document.getElementById('edTplPick'); let o='<option value="">套用樣板…</option>';
@@ -677,8 +690,8 @@ document.getElementById('xlsxFile').addEventListener('change',e=>{
       months.push({month:sn,hidden:(ws['!sheetHidden']?true:false),items});
     });
     if(!months.some(m=>m.items.length)){ alert('在這個 Excel 裡找不到公告資料。請確認格式（A 欄為欄位名、每一直行為一則公告）。'); e.target.value=''; return; }
-    DATA=months; saveData(); refreshMonthPickers(); renderArcList(); arcSel=null;
-    document.querySelector('.tab[data-view="archive"]').click();
+    DATA=months; saveData(); refreshMonthPickers(); arcSel=null; renderArcList();
+    activateView('archive');
     flash('匯入完成：'+months.reduce((n,m)=>n+m.items.length,0)+' 則');
   }catch(err){ alert('匯入失敗：'+err.message); } e.target.value=''; };
   r.readAsArrayBuffer(f);
