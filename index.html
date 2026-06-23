@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>公告管理</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b59974' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20'></path></svg>">
 <style>
   :root{
     --bg:#14141a; --panel:#1c1c24; --panel-2:#23232d; --line:#33333f; --line-soft:#2a2a34;
@@ -157,6 +156,7 @@
     <button id="navNew" class="primary" style="margin-left:8px">＋ 開新公告</button>
     <span class="grow"></span>
     <div class="io">
+      <button id="btnPush" title="把目前所有公告寫回 Google Sheet">存回雲端</button>
       <button id="btnImport">匯入 Excel</button>
       <button id="btnExport">匯出 Excel</button>
       <input type="file" id="xlsxFile" accept=".xlsx,.xlsm" hidden>
@@ -175,6 +175,7 @@
         </label>
         <div style="display:flex; gap:6px;">
           <button class="sm ghost" id="arcAddNew" style="flex:1">＋ 在此月份新增公告</button>
+          <button class="sm ghost" id="arcReload" title="重新從 Google Sheet 讀取最新公告（會取代目前畫面的資料）">重新讀取雲端</button>
           <button class="sm ghost" id="arcReseed" title="捨棄所有編輯，還原成內建的歷史資料">還原內建</button>
         </div>
       </div>
@@ -360,6 +361,48 @@ function loadData(){
 function saveData(){ try{ localStorage.setItem(DATA_KEY, JSON.stringify(DATA)); }catch(_){} flashSaved(); }
 function monthByName(n){ return DATA.find(m=>m.month===n); }
 
+/* ============ Google Sheet 雲端同步（Apps Script 網頁應用程式） ============ */
+// ★ 把你部署好的 Apps Script「網頁應用程式」/exec 網址貼在這裡：
+const WEBAPP_URL='https://script.google.com/macros/s/AKfycbwYZtL-8KkKRAdPMmf-DSzFcyiQIF--3tt64ep1tSKLozj6tPziE6167Usno7A5FOKk/exec';   // 例：https://script.google.com/macros/s/AKfycb..../exec
+function cloudOn(){ return /^https?:\/\/.+\/exec/i.test(WEBAPP_URL); }
+
+// 讀取：GET 網頁應用程式 → { months:[{month,hidden,items:[...]}] }
+async function loadFromCloud(loud){
+  if(!cloudOn()){ if(loud) alert('還沒設定雲端網址。\n請把 Apps Script 的 /exec 網址填到 index.html 最上面的 WEBAPP_URL。'); return; }
+  flash('讀取雲端資料中…');
+  try{
+    const res=await fetch(WEBAPP_URL,{cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=JSON.parse(await res.text());
+    const months=(data&&data.months)||[];
+    if(!months.length) throw new Error('雲端沒有任何資料');
+    DATA=months; saveData(); refreshMonthPickers(); arcSel=null; renderArcList();
+    flash('已讀取雲端：'+months.reduce((n,m)=>n+(m.items?m.items.length:0),0)+' 則');
+  }catch(err){
+    console.error('雲端讀取失敗：',err);
+    flash('雲端讀取失敗，沿用本機資料');
+    if(loud) alert('讀取雲端失敗：'+err.message);
+  }
+}
+// 寫回：POST 目前 DATA 回網頁應用程式（用 text/plain 避免 CORS 預檢）
+async function pushToCloud(){
+  if(!cloudOn()){ alert('還沒設定雲端網址（WEBAPP_URL）。'); return; }
+  const total=DATA.reduce((n,m)=>n+(m.items?m.items.length:0),0);
+  if(!confirm('要把目前 '+DATA.length+' 個月份、共 '+total+' 則公告「寫回」Google Sheet 嗎？\n這會覆蓋雲端上同名月份分頁的內容。')) return;
+  flash('寫回雲端中…');
+  try{
+    const res=await fetch(WEBAPP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({months:DATA})});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=JSON.parse(await res.text());
+    if(!data.ok) throw new Error(data.error||'未知錯誤');
+    flash('已寫回雲端：'+data.months+' 個月份');
+  }catch(err){
+    console.error('寫回失敗：',err);
+    flash('寫回失敗');
+    alert('寫回雲端失敗：'+err.message+'\n\n（資料仍保留在本機，沒有遺失）');
+  }
+}
+
 /* ============ 分頁切換 ============ */
 function activateView(v){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
@@ -469,6 +512,7 @@ function currentArcItem(){ if(!arcSel) return null; const m=monthByName(arcSel.m
 arcSearch.addEventListener('input',renderArcList);
 arcMonthSel.addEventListener('change',renderArcList);
 document.getElementById('arcUnpubOnly').addEventListener('change',renderArcList);
+document.getElementById('arcReload').addEventListener('click',()=>loadFromCloud(true));
 function updateSortUI(){
   document.querySelectorAll('.arc-listhead .sortbtn').forEach(b=>{
     const on=b.dataset.sort===sortState.key;
@@ -689,6 +733,7 @@ document.getElementById('btnExport').addEventListener('click',()=>{
   flash('已匯出 Excel');
 });
 document.getElementById('btnImport').addEventListener('click',()=>document.getElementById('xlsxFile').click());
+document.getElementById('btnPush').addEventListener('click',pushToCloud);
 document.getElementById('xlsxFile').addEventListener('change',e=>{
   const f=e.target.files[0]; if(!f)return;
   if(!confirm('匯入會以這個 Excel 的內容「取代」目前的工作資料（樣板不受影響）。\n建議先用「匯出 Excel」備份。確定匯入？')){ e.target.value=''; return; }
@@ -737,6 +782,7 @@ function flashSaved(){ const ss=document.getElementById('saveState'); ss.textCon
 (function init(){
   refreshMonthPickers(); updateSortUI(); renderArcList(); refreshTplPicker();
   setItem({}); edRender();
+  loadFromCloud(false); // 開網頁預設讀取雲端（未設定 WEBAPP_URL 則沿用本機資料）
 })();
 </script>
 </body>
