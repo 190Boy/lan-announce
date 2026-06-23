@@ -6,70 +6,73 @@
 <title>公告管理</title>
 <style>
   :root{
-    --bg:#14141a; --panel:#1c1c24; --panel-2:#23232d; --panel-3:#2a2a35;
-    --line:#33333f; --line-soft:#2a2a34;
+    --bg:#14141a; --panel:#1c1c24; --panel-2:#23232d; --line:#33333f; --line-soft:#2a2a34;
     --ink:#e6e6ea; --ink-dim:#9a9aa6; --ink-faint:#6b6b78;
-    --gold:#b59974; --blue:#5c7bbb; --red:#c04752; --body-c:#6f6e7c; --green:#6f9a72;
-    --preview-bg:#181818; --preview-default:#d4d4d4;
+    --gold:#b59974; --blue:#5c7bbb; --green:#6f9a72;
+    /* 遊戲內米白面板 */
+    --cream:#f4efe5; --cream-2:#efe8da; --g-line:#ddd3c1;
+    --g-active:#2f2a23; --g-tab:#b3a890; --g-title:#34302a; --g-sub:#c3bbab; --g-body:#5a564d;
     --radius:10px;
   }
   *{box-sizing:border-box;}
   html,body{height:100%;}
-  body{
-    margin:0; background:var(--bg); color:var(--ink);
-    font-family:system-ui,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
-    display:flex; flex-direction:column; height:100vh; overflow:hidden;
-  }
-  /* ---- top nav ---- */
-  .nav{display:flex; align-items:center; gap:16px; padding:11px 18px; border-bottom:1px solid var(--line); flex-shrink:0;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:system-ui,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif; display:flex; flex-direction:column; height:100vh; overflow:hidden;}
+
+  .nav{display:flex; align-items:center; gap:14px; padding:10px 16px; border-bottom:1px solid var(--line); flex-shrink:0; flex-wrap:wrap;}
   .nav h1{font-size:16px; margin:0; font-weight:600; letter-spacing:.5px; white-space:nowrap;}
   .nav h1 .dot{color:var(--gold);}
   .tabs{display:flex; gap:4px;}
-  .tab{
-    font:inherit; font-size:13.5px; color:var(--ink-dim); background:transparent;
-    border:1px solid transparent; border-radius:8px; padding:7px 14px; cursor:pointer; transition:.15s;
-  }
+  .tab{font:inherit; font-size:13.5px; color:var(--ink-dim); background:transparent; border:1px solid transparent; border-radius:8px; padding:7px 14px; cursor:pointer; transition:.15s;}
   .tab:hover{color:var(--ink); background:var(--panel);}
   .tab.active{color:#1a1611; background:var(--gold); font-weight:600;}
-  .nav .save-state{margin-left:auto; font-size:12px; color:var(--ink-faint); transition:color .3s;}
-  .nav .save-state.on{color:var(--gold);}
+  .nav .grow{flex:1;}
+  .nav .io{display:flex; gap:6px;}
+  .save-state{font-size:12px; color:var(--ink-faint); transition:color .3s; min-width:72px; text-align:right;}
+  .save-state.on{color:var(--gold);}
 
   .view{flex:1; min-height:0; display:none;}
   .view.active{display:flex;}
 
-  /* ---- generic ---- */
   button{font:inherit; font-size:12.5px; color:var(--ink); background:var(--panel-2); border:1px solid var(--line); border-radius:7px; padding:6px 11px; cursor:pointer; transition:.15s; white-space:nowrap;}
   button:hover{border-color:var(--ink-faint);}
   button:active{transform:translateY(1px);}
   button:focus-visible{outline:2px solid var(--blue); outline-offset:1px;}
   button.primary{background:var(--gold); border-color:var(--gold); color:#1a1611; font-weight:600;}
   button.primary:hover{filter:brightness(1.07);}
+  button.danger{color:#e79; border-color:#5a3340;}
+  button.danger:hover{background:#3a1f29;}
   button.ghost{background:transparent;}
-  button.sm{padding:4px 8px; font-size:11.5px;}
+  button.sm{padding:4px 9px; font-size:11.5px;}
   input[type=text], select, textarea{font:inherit; color:var(--ink); background:#1a1a22; border:1px solid var(--line); border-radius:7px; outline:none;}
   input[type=text]:focus, select:focus, textarea:focus{border-color:var(--blue);}
+  select{padding:7px 9px; font-size:13px;}
   input[type=color]{width:30px; height:30px; padding:0; border:1px solid var(--line); border-radius:7px; background:var(--panel-2); cursor:pointer; vertical-align:middle;}
   label.fld{display:flex; flex-direction:column; gap:4px; font-size:11.5px; color:var(--ink-faint);}
-  label.fld input[type=text]{padding:7px 9px; font-size:13px;}
+  label.fld input[type=text], label.fld select{padding:7px 9px; font-size:13px;}
   ::-webkit-scrollbar{width:9px; height:9px;}
   ::-webkit-scrollbar-thumb{background:#454552; border-radius:5px;}
-  ::-webkit-scrollbar-track{background:transparent;}
 
-  /* ---- phone preview (shared look) ---- */
-  .preview-wrap{flex:1; display:flex; justify-content:center; align-items:flex-start; padding:14px; background:#0c0c0f; overflow:auto;}
-  .mockup{width:375px; max-width:100%; background:var(--preview-bg); border:1px solid #3a3a44; border-radius:4px; overflow:hidden; box-shadow:0 12px 30px rgba(0,0,0,.45);}
-  .pv{display:flex; flex-direction:column; width:100%;}
-  .pv-image{width:100%; display:block; background:#222;}
-  .pv-image-error{display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:120px; gap:4px; background:#2a1111; color:#ff8585; font-size:13px; border:1px dashed #ff6b6b; text-align:center; padding:14px;}
+  /* ---------- 遊戲內樣式預覽 ---------- */
+  .preview-wrap{flex:1; display:flex; justify-content:center; align-items:flex-start; padding:16px; background:#0c0c0f; overflow:auto;}
+  .mockup{width:375px; max-width:100%; background:var(--cream); border-radius:14px; overflow:hidden; box-shadow:0 14px 36px rgba(0,0,0,.5); display:flex; flex-direction:column;}
+  .g-tabs{display:flex; gap:26px; justify-content:center; padding:14px 0 10px; font-size:15px; color:var(--g-tab); border-bottom:1px solid var(--g-line);}
+  .g-tabs .on{color:var(--g-active); font-weight:700; position:relative;}
+  .g-tabs .on::after{content:""; position:absolute; left:50%; transform:translateX(-50%); bottom:-7px; width:62px; height:4px; border-radius:3px; background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+  .g-title{text-align:center; color:var(--g-title); font-size:16px; font-weight:700; padding:16px 18px 2px; line-height:1.4;}
+  .g-sub{text-align:center; color:var(--g-sub); font-size:9.5px; letter-spacing:5px; padding-bottom:8px;}
+  .pv{display:flex; flex-direction:column; width:100%; padding-bottom:14px;}
+  .pv-image{width:calc(100% - 28px); margin:8px 14px; border-radius:8px; display:block; background:#e7e0d2;}
+  .pv-image-error{margin:8px 14px; display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:110px; gap:4px; background:#f3e3e3; color:#b5524f; font-size:13px; border:1px dashed #d99; border-radius:8px; text-align:center; padding:14px;}
   .pv-image-error small{color:#c98a8a;}
-  .pv-text{padding:18px; font-size:15px; line-height:1.75; color:var(--preview-default); font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif; word-wrap:break-word;}
-  .pv-empty{padding:40px 18px; text-align:center; color:#555; font-size:13px;}
+  .pv-text{padding:6px 18px; font-size:14.5px; line-height:1.78; color:var(--g-body); font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif; word-wrap:break-word;}
+  .pv-empty{padding:46px 18px; text-align:center; color:#b3a; opacity:.4; font-size:13px;}
+  .code-box{width:375px; max-width:100%; height:100%; min-height:300px;}
+  .code-box textarea{width:100%; height:100%; resize:none; padding:14px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; line-height:1.6; background:#11111a;}
 
-  /* ============ ARCHIVE VIEW ============ */
+  /* ---------- 歷史公告 ---------- */
   .arc-side{width:300px; flex-shrink:0; border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0;}
   .arc-side .filters{padding:12px; display:flex; flex-direction:column; gap:8px; border-bottom:1px solid var(--line);}
   .arc-side .filters input[type=text]{padding:8px 10px; font-size:13px;}
-  .arc-side .filters select{padding:8px 10px; font-size:13px;}
   .arc-list{flex:1; overflow:auto; padding:8px;}
   .arc-card{padding:10px 11px; border:1px solid var(--line-soft); border-radius:8px; margin-bottom:7px; cursor:pointer; transition:.12s; background:var(--panel);}
   .arc-card:hover{border-color:var(--ink-faint);}
@@ -81,14 +84,15 @@
   .dot{width:7px; height:7px; border-radius:50%; display:inline-block;}
   .dot.live{background:var(--green);} .dot.test{background:var(--gold);}
   .arc-main{flex:1; display:flex; flex-direction:column; min-height:0;}
-  .arc-main .detail-head{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
-  .arc-main .detail-head .title{font-size:14px; font-weight:600; flex:1; min-width:160px;}
+  .detail-head{padding:11px 16px; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+  .detail-head .title{font-size:14px; font-weight:600; flex:1; min-width:140px;}
   .detail-meta{padding:10px 16px; border-top:1px solid var(--line); font-size:12px; color:var(--ink-dim); display:flex; gap:18px; flex-wrap:wrap; flex-shrink:0;}
   .detail-meta b{color:var(--ink-faint); font-weight:500;}
 
-  /* ============ EDITOR VIEW ============ */
+  /* ---------- 編輯公告 ---------- */
   .ed-left{flex:1; display:flex; flex-direction:column; min-height:0; border-right:1px solid var(--line);}
   .ed-actions{padding:10px 14px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; border-bottom:1px solid var(--line);}
+  .ed-mode{font-size:12.5px; color:var(--gold); font-weight:600; margin-right:4px;}
   .ed-actions .grp{display:flex; gap:6px; align-items:center;}
   .ed-actions .sep{flex:1;}
   .ed-meta{padding:12px 14px; display:grid; grid-template-columns:repeat(4,1fr); gap:10px; border-bottom:1px solid var(--line);}
@@ -108,7 +112,7 @@
   .ed-right .legend .sw{width:10px; height:10px; border-radius:2px;}
   @media (max-width:900px){ .ed-meta{grid-template-columns:repeat(2,1fr);} .ed-meta .wide{grid-column:span 2;} .ed-meta .checks{grid-column:span 2;} .ed-right{width:380px;} }
 
-  /* ============ TEMPLATES VIEW ============ */
+  /* ---------- 樣板 ---------- */
   .tpl-wrap{flex:1; display:flex; min-height:0;}
   .tpl-list-pane{flex:1; display:flex; flex-direction:column; min-height:0; border-right:1px solid var(--line);}
   .tpl-bar{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
@@ -134,52 +138,74 @@
       <button class="tab" data-view="editor">編輯公告</button>
       <button class="tab" data-view="templates">樣板</button>
     </div>
+    <span class="grow"></span>
+    <div class="io">
+      <button id="btnImport">匯入 Excel</button>
+      <button id="btnExport">匯出 Excel</button>
+      <input type="file" id="xlsxFile" accept=".xlsx,.xlsm" hidden>
+    </div>
     <span class="save-state" id="saveState"></span>
   </div>
 
-  <!-- ============ ARCHIVE ============ -->
+  <!-- 歷史公告 -->
   <section class="view active" data-view="archive">
     <aside class="arc-side">
       <div class="filters">
         <input type="text" id="arcSearch" placeholder="搜尋標題或內文…">
         <select id="arcMonth"></select>
+        <div style="display:flex; gap:6px;">
+          <button class="sm ghost" id="arcAddNew" style="flex:1">＋ 在此月份新增公告</button>
+          <button class="sm ghost" id="arcReseed" title="捨棄所有編輯，還原成內建的歷史資料">還原內建</button>
+        </div>
       </div>
       <div class="arc-list" id="arcList"></div>
     </aside>
     <main class="arc-main">
       <div class="detail-head">
         <span class="title" id="arcTitle">選擇左側一則公告</span>
-        <button class="sm" id="arcCopy">複製原始碼</button>
-        <button class="sm" id="arcEdit">以此為基礎編輯</button>
-        <button class="sm" id="arcToTpl">存為樣板</button>
+        <button class="sm" id="arcToggle">顯示原始碼</button>
+        <button class="sm" id="arcCopy">全部複製</button>
+        <button class="sm" id="arcEdit">編輯此則</button>
+        <button class="sm danger" id="arcDel">刪除</button>
       </div>
-      <div class="preview-wrap"><div class="mockup"><div class="pv" id="arcPreview"><div class="pv-empty">尚未選擇公告</div></div></div></div>
+      <div class="preview-wrap">
+        <div class="mockup" id="arcMock">
+          <div class="g-tabs"><span class="on">活動公告</span><span>系統公告</span></div>
+          <div class="g-title" id="arcGTitle"></div>
+          <div class="g-sub">L I G H T &nbsp; A N D &nbsp; N I G H T</div>
+          <div class="pv" id="arcPreview"><div class="pv-empty">尚未選擇公告</div></div>
+        </div>
+        <div class="code-box" id="arcCodeBox" hidden><textarea id="arcCode" readonly spellcheck="false"></textarea></div>
+      </div>
       <div class="detail-meta" id="arcMeta"></div>
     </main>
   </section>
 
-  <!-- ============ EDITOR ============ -->
+  <!-- 編輯公告 -->
   <section class="view" data-view="editor">
     <div class="ed-left">
       <div class="ed-actions">
+        <span class="ed-mode" id="edMode">新公告</span>
         <div class="grp">
-          <span style="font-size:12px;color:var(--ink-faint)">新公告：</span>
           <button id="edBlank">空白</button>
           <select id="edTplPick"><option value="">套用樣板…</option></select>
         </div>
         <span class="sep"></span>
         <button id="edSaveTpl">存為樣板</button>
-        <button class="primary" id="edCopy">複製原始碼</button>
+        <button id="edCopy">全部複製</button>
+        <button class="primary" id="edSave">儲存</button>
       </div>
 
       <div class="ed-meta">
         <label class="fld wide">標題<input type="text" id="m_title"></label>
+        <label class="fld">所屬月份<select id="m_month"></select></label>
         <label class="fld">頁籤<input type="text" id="m_tab"></label>
         <label class="fld">連結<input type="text" id="m_link" placeholder="lv://…"></label>
         <label class="fld">發布日期<input type="text" id="m_start" placeholder="2026-08-05 05:00"></label>
         <label class="fld">結束日期<input type="text" id="m_end" placeholder="2026-08-12 04:59"></label>
         <label class="fld">ID<input type="text" id="m_id"></label>
         <label class="fld">順位<input type="text" id="m_order"></label>
+        <label class="fld wide">圖素（圖片公告用）<input type="text" id="m_asset" placeholder="https://…"></label>
         <div class="checks">
           <label><input type="checkbox" id="m_live"> 已上正式服</label>
           <label><input type="checkbox" id="m_test"> 測試服公告</label>
@@ -201,7 +227,6 @@
       </div>
 
       <textarea id="edSource" spellcheck="false" placeholder="在這裡輸入公告內容…"></textarea>
-
       <div class="ed-status">
         <span>字數 <b id="cCount">0</b></span>
         <span>段數 <b id="sCount">0</b></span>
@@ -211,7 +236,14 @@
     </div>
     <div class="ed-right">
       <div class="panel-head">📱 實際版面預覽</div>
-      <div class="preview-wrap"><div class="mockup"><div class="pv" id="edPreview"></div></div></div>
+      <div class="preview-wrap">
+        <div class="mockup">
+          <div class="g-tabs"><span class="on">活動公告</span><span>系統公告</span></div>
+          <div class="g-title" id="edGTitle"></div>
+          <div class="g-sub">L I G H T &nbsp; A N D &nbsp; N I G H T</div>
+          <div class="pv" id="edPreview"></div>
+        </div>
+      </div>
       <div class="legend">
         <span class="it"><span class="sw" style="background:#6f6e7c"></span>內文 6f6e7c</span>
         <span class="it"><span class="sw" style="background:#b59974"></span>標題 b59974</span>
@@ -221,7 +253,7 @@
     </div>
   </section>
 
-  <!-- ============ TEMPLATES ============ -->
+  <!-- 樣板 -->
   <section class="view" data-view="templates">
     <div class="tpl-wrap">
       <div class="tpl-list-pane">
@@ -236,15 +268,23 @@
       </div>
       <div class="tpl-prev-pane">
         <div class="panel-head">📱 樣板預覽</div>
-        <div class="preview-wrap"><div class="mockup"><div class="pv" id="tplPreview"><div class="pv-empty">選擇或建立樣板</div></div></div></div>
+        <div class="preview-wrap">
+          <div class="mockup">
+            <div class="g-tabs"><span class="on">活動公告</span><span>系統公告</span></div>
+            <div class="g-title" id="tplGTitle"></div>
+            <div class="g-sub">L I G H T &nbsp; A N D &nbsp; N I G H T</div>
+            <div class="pv" id="tplPreview"><div class="pv-empty">選擇或建立樣板</div></div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
 <script src="archive.js"></script>
+<script src="xlsx.full.min.js"></script>
 <script>
-/* =================== 共用解析引擎（與遊戲內顯示一致） =================== */
-function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+/* ============ 解析引擎（與遊戲內顯示一致） ============ */
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function parseSource(raw){
   raw=(raw||'').replace(/\r\n/g,'\n');
   const parts=raw.split('#|#'); let html='';
@@ -253,33 +293,45 @@ function parseSource(raw){
     if(t.startsWith('http://')||t.startsWith('https://')){
       html+=`<img class="pv-image" src="${t.replace(/"/g,'&quot;')}" alt="Banner" onerror="this.outerHTML='<div class=\\'pv-image-error\\'>圖片載入失敗<br><small>請確認網址，或是否需連線 VPN</small></div>'">`;
     }else{
-      let x=esc(part.replace(/^\n/,''))
-        .replace(/\[([a-fA-F0-9]{6})\]/g,'<span style="color:#$1;">')
-        .replace(/\[-\]/g,'</span>')
-        .replace(/\n/g,'<br>');
+      let x=esc(part.replace(/^\n/,'')).replace(/\[([a-fA-F0-9]{6})\]/g,'<span style="color:#$1;">').replace(/\[-\]/g,'</span>').replace(/\n/g,'<br>');
       html+=`<div class="pv-text">${x}</div>`;
     }
   });
   return html;
 }
-function renderInto(el,raw){
-  const h=parseSource(raw);
-  el.innerHTML = h || '<div class="pv-empty">（無內容）</div>';
+function renderGame(bodyEl,titleEl,raw,title){
+  if(titleEl){ titleEl.textContent=title||''; titleEl.style.display=title?'block':'none'; }
+  bodyEl.innerHTML=parseSource(raw)||'<div class="pv-empty">（無內容）</div>';
 }
 function statsOf(raw){
   raw=(raw||'').replace(/\r\n/g,'\n');
   const segs=raw.split('#|#').map(s=>s.trim()).filter(Boolean);
-  return {chars:raw.length, segs:segs.length,
-    imgs:segs.filter(s=>s.startsWith('http://')||s.startsWith('https://')).length};
+  return {chars:raw.length, segs:segs.length, imgs:segs.filter(s=>s.startsWith('http://')||s.startsWith('https://')).length};
 }
-/* item -> 有效原始碼（內文優先，否則用圖素當純圖片） */
 function effectiveSource(it){
-  if(it['內文'] && it['內文'].trim()) return it['內文'];
-  if(it['圖素'] && it['圖素'].trim()) return it['圖素'].trim();
+  if(it['內文']&&it['內文'].trim()) return it['內文'];
+  if(it['圖素']&&it['圖素'].trim()) return it['圖素'].trim();
   return '';
 }
+function isTrue(v){return v===true||v==='True'||v==='TRUE'||v===1;}
 
-/* =================== 分頁切換 =================== */
+/* ============ 資料模型 ============ */
+const DATA_KEY='gh_ann_data_v1';
+const FIELDS=['發布日期','結束日期','標題','頁籤','內文','圖素','連結','ＩＤ','順位','已上正式服','測試服公告'];
+let DATA=loadData();
+
+function baseline(){
+  const b=(window.ARCHIVE&&window.ARCHIVE.months)?window.ARCHIVE.months:[];
+  return JSON.parse(JSON.stringify(b));
+}
+function loadData(){
+  try{ const d=JSON.parse(localStorage.getItem(DATA_KEY)); if(d&&d.length) return d; }catch(_){}
+  return baseline();
+}
+function saveData(){ try{ localStorage.setItem(DATA_KEY, JSON.stringify(DATA)); }catch(_){} flashSaved(); }
+function monthByName(n){ return DATA.find(m=>m.month===n); }
+
+/* ============ 分頁切換 ============ */
 document.querySelectorAll('.tab').forEach(tab=>{
   tab.addEventListener('click',()=>{
     const v=tab.dataset.view;
@@ -289,91 +341,99 @@ document.querySelectorAll('.tab').forEach(tab=>{
   });
 });
 
-/* =================== 歷史公告 =================== */
-const ARC = (window.ARCHIVE && window.ARCHIVE.months) ? window.ARCHIVE.months : [];
-let arcFlat=[]; // {month,hidden,idx,it}
-ARC.forEach(m=> m.items.forEach((it,i)=> arcFlat.push({month:m.month,hidden:m.hidden,it})));
-let arcSel=null;
-
+/* ============ 歷史公告 ============ */
+let arcSel=null; // {month, idx}
 const arcMonthSel=document.getElementById('arcMonth');
 const arcListEl=document.getElementById('arcList');
 const arcSearch=document.getElementById('arcSearch');
 
-(function initArcMonths(){
-  let opt='<option value="">全部月份（'+arcFlat.length+'）</option>';
-  ARC.forEach(m=>{
-    if(!m.items.length) return;
-    opt+=`<option value="${m.month}">${m.month}${m.hidden?'（隱藏）':''}　${m.items.length} 則</option>`;
-  });
-  arcMonthSel.innerHTML=opt;
-})();
-
+function refreshMonthPickers(){
+  let opt='<option value="">全部月份</option>';
+  DATA.forEach(m=>{ if(m.items.length) opt+=`<option value="${esc(m.month)}">${esc(m.month)}${m.hidden?'（隱藏）':''}　${m.items.length} 則</option>`; });
+  const cur=arcMonthSel.value; arcMonthSel.innerHTML=opt; arcMonthSel.value=cur;
+  let mo='<option value="">— 選擇月份 —</option>';
+  DATA.forEach(m=> mo+=`<option value="${esc(m.month)}">${esc(m.month)}</option>`);
+  mo+='<option value="__new__">＋ 新增月份…</option>';
+  const em=document.getElementById('m_month'); const ec=em.value; em.innerHTML=mo; em.value=ec;
+}
 function arcFiltered(){
-  const q=arcSearch.value.trim(); const mo=arcMonthSel.value;
-  return arcFlat.filter(r=>{
-    if(mo && r.month!==mo) return false;
-    if(q){
-      const hay=(r.it['標題']||'')+'\n'+(r.it['內文']||'');
-      if(!hay.includes(q)) return false;
-    }
-    return true;
+  const q=arcSearch.value.trim(), mo=arcMonthSel.value, out=[];
+  DATA.forEach(m=>{ if(mo&&m.month!==mo) return;
+    m.items.forEach((it,idx)=>{
+      if(q){ const hay=(it['標題']||'')+'\n'+(it['內文']||''); if(!hay.includes(q)) return; }
+      out.push({month:m.month,hidden:m.hidden,idx,it});
+    });
   });
+  return out;
 }
 function renderArcList(){
   const list=arcFiltered();
   if(!list.length){ arcListEl.innerHTML='<div class="empty-hint">沒有符合的公告</div>'; return; }
   arcListEl.innerHTML=list.map((r,i)=>{
     const it=r.it;
-    const live=it['已上正式服']===true||it['已上正式服']==='True';
-    const test=it['測試服公告']===true||it['測試服公告']==='True';
-    return `<div class="arc-card" data-i="${i}">
+    return `<div class="arc-card ${arcSel&&arcSel.month===r.month&&arcSel.idx===r.idx?'sel':''}" data-i="${i}">
       <div class="t">${esc(it['標題']||'（無標題）')}</div>
-      <div class="meta">
-        <span class="badge">${esc(r.month)}</span>
+      <div class="meta"><span class="badge">${esc(r.month)}</span>
         ${it['頁籤']?`<span class="badge tab">${esc(it['頁籤'])}</span>`:''}
         ${it['發布日期']?`<span>${esc(it['發布日期'])}</span>`:''}
-        ${live?'<span class="dot live" title="已上正式服"></span>':''}
-        ${test?'<span class="dot test" title="測試服公告"></span>':''}
+        ${isTrue(it['已上正式服'])?'<span class="dot live" title="已上正式服"></span>':''}
+        ${isTrue(it['測試服公告'])?'<span class="dot test" title="測試服公告"></span>':''}
       </div></div>`;
   }).join('');
-  [...arcListEl.children].forEach(c=>{
-    if(!c.dataset.i) return;
-    c.addEventListener('click',()=>selectArc(list[+c.dataset.i], c));
-  });
+  [...arcListEl.children].forEach(c=>{ if(c.dataset.i!==undefined) c.addEventListener('click',()=>selectArc(list[+c.dataset.i])); });
 }
-function selectArc(r,cardEl){
-  arcSel=r;
-  [...arcListEl.querySelectorAll('.arc-card')].forEach(c=>c.classList.toggle('sel',c===cardEl));
+function selectArc(r){
+  arcSel={month:r.month,idx:r.idx};
+  renderArcList();
   const it=r.it;
   document.getElementById('arcTitle').textContent=it['標題']||'（無標題）';
-  renderInto(document.getElementById('arcPreview'), effectiveSource(it));
+  const src=effectiveSource(it);
+  renderGame(document.getElementById('arcPreview'),document.getElementById('arcGTitle'),src,it['標題']);
+  document.getElementById('arcCode').value=src;
   const fields=[['月份',r.month],['頁籤',it['頁籤']],['發布',it['發布日期']],['結束',it['結束日期']],['連結',it['連結']],['ID',it['ＩＤ']]];
-  document.getElementById('arcMeta').innerHTML=fields
-    .filter(f=>f[1]&&String(f[1]).trim())
-    .map(f=>`<span><b>${f[0]}</b> ${esc(String(f[1]))}</span>`).join('');
+  document.getElementById('arcMeta').innerHTML=fields.filter(f=>f[1]&&String(f[1]).trim()).map(f=>`<span><b>${f[0]}</b> ${esc(String(f[1]))}</span>`).join('');
 }
+function currentArcItem(){ if(!arcSel) return null; const m=monthByName(arcSel.month); return m?m.items[arcSel.idx]:null; }
+
 arcSearch.addEventListener('input',renderArcList);
 arcMonthSel.addEventListener('change',renderArcList);
-document.getElementById('arcCopy').addEventListener('click',e=>{ if(arcSel) copyText(effectiveSource(arcSel.it), e.currentTarget); });
-document.getElementById('arcEdit').addEventListener('click',()=>{ if(arcSel) loadIntoEditor(arcSel.it); });
-document.getElementById('arcToTpl').addEventListener('click',()=>{ if(arcSel) saveTemplateFrom(arcSel.it); });
-renderArcList();
+document.getElementById('arcToggle').addEventListener('click',e=>{
+  const box=document.getElementById('arcCodeBox'), mock=document.getElementById('arcMock');
+  const showCode=box.hasAttribute('hidden');
+  box.toggleAttribute('hidden',!showCode); mock.style.display=showCode?'none':'flex';
+  e.currentTarget.textContent=showCode?'顯示預覽':'顯示原始碼';
+});
+document.getElementById('arcCopy').addEventListener('click',e=>{ const it=currentArcItem(); if(it) copyText(effectiveSource(it),e.currentTarget); });
+document.getElementById('arcEdit').addEventListener('click',()=>{ if(arcSel) loadIntoEditor(arcSel.month,arcSel.idx); });
+document.getElementById('arcDel').addEventListener('click',()=>{
+  const it=currentArcItem(); if(!it) return;
+  if(!confirm('刪除這則公告？\n「'+(it['標題']||'')+'」')) return;
+  monthByName(arcSel.month).items.splice(arcSel.idx,1); arcSel=null; saveData(); refreshMonthPickers(); renderArcList();
+  document.getElementById('arcTitle').textContent='選擇左側一則公告';
+  renderGame(document.getElementById('arcPreview'),document.getElementById('arcGTitle'),'','');
+  document.getElementById('arcMeta').innerHTML='';
+});
+document.getElementById('arcAddNew').addEventListener('click',()=>{
+  const mo=arcMonthSel.value; if(!mo){ alert('請先在上方選一個月份，再新增公告。'); return; }
+  document.getElementById('m_month').value=mo; newAnnouncement(mo);
+});
+document.getElementById('arcReseed').addEventListener('click',()=>{
+  if(!confirm('還原成內建歷史資料？\n你目前所有的編輯與新增將被捨棄（樣板不受影響）。')) return;
+  DATA=baseline(); saveData(); refreshMonthPickers(); renderArcList(); arcSel=null;
+});
 
-/* =================== 編輯公告 =================== */
+/* ============ 編輯公告 ============ */
 const edSource=document.getElementById('edSource');
 const edPreview=document.getElementById('edPreview');
-const M={title:'m_title',tab:'m_tab',link:'m_link',start:'m_start',end:'m_end',id:'m_id',order:'m_order'};
-const DRAFT_KEY='gh_ann_draft_v1';
+let editingRef=null; // {month, idx} 或 null=新公告
 
-function getMeta(){
-  return {
-    '標題':val('m_title'),'頁籤':val('m_tab'),'連結':val('m_link'),
-    '發布日期':val('m_start'),'結束日期':val('m_end'),'ＩＤ':val('m_id'),'順位':val('m_order'),
-    '已上正式服':document.getElementById('m_live').checked,
-    '測試服公告':document.getElementById('m_test').checked
-  };
+function val(id){return document.getElementById(id).value;}
+function getItem(){
+  return {'發布日期':val('m_start'),'結束日期':val('m_end'),'標題':val('m_title'),'頁籤':val('m_tab'),
+    '內文':edSource.value,'圖素':val('m_asset'),'連結':val('m_link'),'ＩＤ':val('m_id'),'順位':val('m_order'),
+    '已上正式服':document.getElementById('m_live').checked,'測試服公告':document.getElementById('m_test').checked};
 }
-function setMeta(it){
+function setItem(it){
   document.getElementById('m_title').value=it['標題']||'';
   document.getElementById('m_tab').value=it['頁籤']||'';
   document.getElementById('m_link').value=it['連結']||'';
@@ -381,102 +441,105 @@ function setMeta(it){
   document.getElementById('m_end').value=it['結束日期']||'';
   document.getElementById('m_id').value=it['ＩＤ']||'';
   document.getElementById('m_order').value=it['順位']||'';
-  document.getElementById('m_live').checked=(it['已上正式服']===true||it['已上正式服']==='True');
-  document.getElementById('m_test').checked=(it['測試服公告']===true||it['測試服公告']==='True');
+  document.getElementById('m_asset').value=it['圖素']||'';
+  document.getElementById('m_live').checked=isTrue(it['已上正式服']);
+  document.getElementById('m_test').checked=isTrue(it['測試服公告']);
+  edSource.value=it['內文']!==undefined?it['內文']:effectiveSource(it);
 }
-function val(id){return document.getElementById(id).value;}
-
+function setMode(){
+  const el=document.getElementById('edMode'), btn=document.getElementById('edSave');
+  if(editingRef){ el.textContent='編輯：'+editingRef.month+' / '+(val('m_title')||'（無標題）'); btn.textContent='儲存變更'; }
+  else { el.textContent='新公告'; btn.textContent='新增到此月份'; }
+}
 function edRender(){
-  renderInto(edPreview, edSource.value);
+  renderGame(edPreview,document.getElementById('edGTitle'),edSource.value,val('m_title'));
   const s=statsOf(edSource.value);
   document.getElementById('cCount').textContent=s.chars;
   document.getElementById('sCount').textContent=s.segs;
   document.getElementById('iCount').textContent=s.imgs;
+  setMode();
 }
-let saveTimer=null;
-function edChanged(){
-  edRender();
-  const ss=document.getElementById('saveState'); ss.textContent='編輯中…'; ss.classList.remove('on');
-  clearTimeout(saveTimer);
-  saveTimer=setTimeout(()=>{
-    try{ localStorage.setItem(DRAFT_KEY, JSON.stringify({source:edSource.value, meta:getMeta()})); }catch(_){}
-    ss.textContent='草稿已暫存'; ss.classList.add('on');
-  },500);
+edSource.addEventListener('input',edRender);
+['m_title','m_tab','m_link','m_start','m_end','m_id','m_order','m_asset'].forEach(id=>document.getElementById(id).addEventListener('input',edRender));
+
+function loadIntoEditor(month,idx){
+  const it=monthByName(month).items[idx];
+  editingRef={month,idx}; setItem(it);
+  document.getElementById('m_month').value=month;
+  edRender(); document.querySelector('.tab[data-view="editor"]').click();
 }
-edSource.addEventListener('input',edChanged);
-Object.values(M).forEach(id=>document.getElementById(id).addEventListener('input',edChanged));
-document.getElementById('m_live').addEventListener('change',edChanged);
-document.getElementById('m_test').addEventListener('change',edChanged);
+function newAnnouncement(month){
+  editingRef=null; setItem({}); if(month) document.getElementById('m_month').value=month;
+  edRender(); document.querySelector('.tab[data-view="editor"]').click();
+}
+document.getElementById('m_month').addEventListener('change',e=>{
+  if(e.target.value==='__new__'){
+    const n=prompt('新月份名稱（例：2609）：'); 
+    if(n&&n.trim()){ if(!monthByName(n.trim())){ DATA.unshift({month:n.trim(),hidden:false,items:[]}); saveData(); } refreshMonthPickers(); e.target.value=n.trim(); }
+    else { e.target.value=''; }
+  }
+});
+document.getElementById('edSave').addEventListener('click',()=>{
+  const it=getItem();
+  if(editingRef){
+    monthByName(editingRef.month).items[editingRef.idx]=it; saveData(); flash('已儲存變更'); renderArcList();
+  }else{
+    const mo=val('m_month'); if(!mo||mo==='__new__'){ alert('請先選擇「所屬月份」。'); return; }
+    const m=monthByName(mo); if(!m){ alert('找不到月份。'); return; }
+    m.items.push(it); editingRef={month:mo,idx:m.items.length-1}; saveData(); flash('已新增公告'); refreshMonthPickers(); renderArcList(); setMode();
+  }
+});
+document.getElementById('edBlank').addEventListener('click',()=>{ if(edSource.value.trim()&&!confirm('清空目前內容，開新公告？')) return; newAnnouncement(val('m_month')); });
+document.getElementById('edCopy').addEventListener('click',e=>copyText(edSource.value,e.currentTarget));
+document.getElementById('edSaveTpl').addEventListener('click',()=>saveTemplateFromEditor());
 
 /* 工具列 */
 function wrapSel(before,after,ph=''){
-  const s=edSource, a=s.selectionStart, b=s.selectionEnd;
-  const sel=s.value.slice(a,b)||ph;
+  const s=edSource,a=s.selectionStart,b=s.selectionEnd,sel=s.value.slice(a,b)||ph;
   s.setRangeText(before+sel+after,a,b,'end');
-  if(a===b && !ph){ const c=a+before.length; s.setSelectionRange(c,c); }
-  s.focus(); edChanged();
+  if(a===b&&!ph){const c=a+before.length; s.setSelectionRange(c,c);}
+  s.focus(); edRender();
 }
-function insAt(str){ const s=edSource,a=s.selectionStart,b=s.selectionEnd; s.setRangeText(str,a,b,'end'); s.focus(); edChanged(); }
+function insAt(str){const s=edSource,a=s.selectionStart,b=s.selectionEnd; s.setRangeText(str,a,b,'end'); s.focus(); edRender();}
 document.querySelectorAll('button[data-color]').forEach(btn=>btn.addEventListener('click',()=>wrapSel(`[${btn.dataset.color}]`,'[-]')));
-document.getElementById('applyCustom').addEventListener('click',()=>wrapSel(`[${document.getElementById('customColor').value.replace('#','')}]`,'[-]'));
+document.getElementById('applyCustom').addEventListener('click',()=>wrapSel(`[${val('customColor').replace('#','')}]`,'[-]'));
 document.getElementById('insHeader').addEventListener('click',()=>wrapSel('┃','┃','標題'));
 document.getElementById('insSplit').addEventListener('click',()=>insAt('#|#'));
-document.getElementById('insImage').addEventListener('click',()=>{
-  const url=prompt('輸入圖片網址：','https://backend.tw.gamehours.com/upload/images/'); if(!url) return;
-  const need=edSource.value.trim().length?'#|#':''; insAt(`${need}${url.trim()}#|#`);
-});
-document.getElementById('edCopy').addEventListener('click',e=>copyText(edSource.value,e.currentTarget));
-document.getElementById('edBlank').addEventListener('click',()=>{
-  if(edSource.value.trim() && !confirm('清空目前編輯內容，開新公告？')) return;
-  setMeta({}); edSource.value=''; edChanged();
-});
-document.getElementById('edSaveTpl').addEventListener('click',()=>saveTemplateFrom(getMeta(), edSource.value));
+document.getElementById('insImage').addEventListener('click',()=>{ const url=prompt('輸入圖片網址：','https://backend.tw.gamehours.com/upload/images/'); if(!url)return; const need=edSource.value.trim().length?'#|#':''; insAt(`${need}${url.trim()}#|#`); });
 
-function loadIntoEditor(it){
-  setMeta(it); edSource.value=effectiveSource(it); edChanged();
-  document.querySelector('.tab[data-view="editor"]').click();
-}
-
-/* =================== 樣板 =================== */
+/* ============ 樣板 ============ */
 const TPL_KEY='gh_ann_templates_v1';
-let templates=loadTpl();
-let tplSel=null;
+let templates=loadTpl(); let tplSel=null;
 function loadTpl(){ try{return JSON.parse(localStorage.getItem(TPL_KEY))||[];}catch(_){return [];} }
 function persistTpl(){ try{localStorage.setItem(TPL_KEY,JSON.stringify(templates));}catch(_){} }
-
-function saveTemplateFrom(metaOrItem, source){
-  const src = source!==undefined ? source : effectiveSource(metaOrItem);
-  const name=prompt('樣板名稱：', metaOrItem['標題']||'新樣板'); if(!name) return;
-  templates.push({id:Date.now(), name:name.trim(), source:src, meta:{
-    '頁籤':metaOrItem['頁籤']||'','連結':metaOrItem['連結']||''
-  }, default:false});
-  persistTpl(); refreshTplPicker();
-  flash('已存為樣板：'+name);
+function saveTemplateFromEditor(){
+  const name=prompt('樣板名稱：',val('m_title')||'新樣板'); if(!name) return;
+  templates.push({id:Date.now(),name:name.trim(),source:edSource.value,meta:{'頁籤':val('m_tab'),'連結':val('m_link')},default:false});
+  persistTpl(); refreshTplPicker(); flash('已存為樣板：'+name);
+}
+function saveTemplateFromItem(it){
+  const name=prompt('樣板名稱：',it['標題']||'新樣板'); if(!name) return;
+  templates.push({id:Date.now(),name:name.trim(),source:effectiveSource(it),meta:{'頁籤':it['頁籤']||'','連結':it['連結']||''},default:false});
+  persistTpl(); refreshTplPicker(); flash('已存為樣板：'+name);
 }
 function renderTplList(){
   const el=document.getElementById('tplList');
-  if(!templates.length){ el.innerHTML='<div class="empty-hint">還沒有樣板。<br>到「編輯公告」做好內容後，按「存為樣板」即可建立；<br>也可以在歷史公告裡選一則「存為樣板」。</div>'; document.getElementById('tplPreview').innerHTML='<div class="pv-empty">選擇或建立樣板</div>'; return; }
-  el.innerHTML=templates.map(t=>`
-    <div class="tpl-card ${tplSel&&tplSel.id===t.id?'sel':''}" data-id="${t.id}">
-      <div class="hd">${t.default?'<span class="star" title="預設">★</span>':''}<span class="nm">${esc(t.name)}</span></div>
-      <div class="snip">${esc((t.source||'').replace(/#\|#/g,' ⏐ ').slice(0,90))}</div>
-      <div class="row">
-        <button class="sm" data-act="apply">套用到編輯</button>
-        <button class="sm" data-act="default">${t.default?'取消預設':'設為預設'}</button>
-        <button class="sm" data-act="rename">重新命名</button>
-        <button class="sm" data-act="del">刪除</button>
-      </div>
-    </div>`).join('');
+  if(!templates.length){ el.innerHTML='<div class="empty-hint">還沒有樣板。<br>到「編輯公告」做好內容後按「存為樣板」即可建立。</div>'; renderGame(document.getElementById('tplPreview'),document.getElementById('tplGTitle'),'',''); return; }
+  el.innerHTML=templates.map(t=>`<div class="tpl-card ${tplSel&&tplSel.id===t.id?'sel':''}" data-id="${t.id}">
+    <div class="hd">${t.default?'<span class="star" title="預設">★</span>':''}<span class="nm">${esc(t.name)}</span></div>
+    <div class="snip">${esc((t.source||'').replace(/#\|#/g,' ⏐ ').slice(0,90))}</div>
+    <div class="row">
+      <button class="sm" data-act="apply">套用到編輯</button>
+      <button class="sm" data-act="default">${t.default?'取消預設':'設為預設'}</button>
+      <button class="sm" data-act="rename">重新命名</button>
+      <button class="sm danger" data-act="del">刪除</button>
+    </div></div>`).join('');
   [...el.querySelectorAll('.tpl-card')].forEach(card=>{
     const t=templates.find(x=>x.id==card.dataset.id);
-    card.addEventListener('click',ev=>{
-      if(ev.target.dataset.act) return;
-      tplSel=t; renderInto(document.getElementById('tplPreview'),t.source);
-      [...el.querySelectorAll('.tpl-card')].forEach(c=>c.classList.toggle('sel',c===card));
-    });
+    card.addEventListener('click',ev=>{ if(ev.target.dataset.act) return; tplSel=t; renderGame(document.getElementById('tplPreview'),document.getElementById('tplGTitle'),t.source,''); [...el.querySelectorAll('.tpl-card')].forEach(c=>c.classList.toggle('sel',c===card)); });
     card.querySelectorAll('button[data-act]').forEach(btn=>btn.addEventListener('click',()=>{
       const act=btn.dataset.act;
-      if(act==='apply'){ applyTemplate(t); }
+      if(act==='apply') applyTemplate(t);
       else if(act==='default'){ const on=!t.default; templates.forEach(x=>x.default=false); t.default=on; persistTpl(); renderTplList(); refreshTplPicker(); }
       else if(act==='rename'){ const n=prompt('新名稱：',t.name); if(n){t.name=n.trim(); persistTpl(); renderTplList(); refreshTplPicker();} }
       else if(act==='del'){ if(confirm('刪除樣板「'+t.name+'」？')){ templates=templates.filter(x=>x.id!==t.id); if(tplSel&&tplSel.id===t.id)tplSel=null; persistTpl(); renderTplList(); refreshTplPicker(); } }
@@ -484,57 +547,91 @@ function renderTplList(){
   });
 }
 function applyTemplate(t){
-  if(edSource.value.trim() && !confirm('用樣板覆蓋目前編輯內容？')) return;
-  setMeta({'頁籤':t.meta&&t.meta['頁籤'],'連結':t.meta&&t.meta['連結']});
-  edSource.value=t.source||''; edChanged();
-  document.querySelector('.tab[data-view="editor"]').click();
+  if(edSource.value.trim()&&!confirm('用樣板覆蓋目前編輯內容？')) return;
+  editingRef=null; setItem({'頁籤':t.meta&&t.meta['頁籤'],'連結':t.meta&&t.meta['連結'],'內文':t.source||''});
+  edRender(); document.querySelector('.tab[data-view="editor"]').click();
 }
 function refreshTplPicker(){
-  const sel=document.getElementById('edTplPick');
-  let o='<option value="">套用樣板…</option>';
-  templates.slice().sort((a,b)=>(b.default?1:0)-(a.default?1:0)).forEach(t=>{
-    o+=`<option value="${t.id}">${t.default?'★ ':''}${esc(t.name)}</option>`;
-  });
+  const sel=document.getElementById('edTplPick'); let o='<option value="">套用樣板…</option>';
+  templates.slice().sort((a,b)=>(b.default?1:0)-(a.default?1:0)).forEach(t=>o+=`<option value="${t.id}">${t.default?'★ ':''}${esc(t.name)}</option>`);
   sel.innerHTML=o;
 }
-document.getElementById('edTplPick').addEventListener('change',e=>{
-  const t=templates.find(x=>x.id==e.target.value); e.target.value='';
-  if(t) applyTemplate(t);
-});
-document.getElementById('tplNew').addEventListener('click',()=>saveTemplateFrom(getMeta(), edSource.value));
-document.getElementById('tplExport').addEventListener('click',()=>{
-  const blob=new Blob([JSON.stringify(templates,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='announcement-templates.json'; a.click(); URL.revokeObjectURL(a.href);
-});
+document.getElementById('edTplPick').addEventListener('change',e=>{ const t=templates.find(x=>x.id==e.target.value); e.target.value=''; if(t) applyTemplate(t); });
+document.getElementById('tplNew').addEventListener('click',saveTemplateFromEditor);
+document.getElementById('tplExport').addEventListener('click',()=>downloadBlob(JSON.stringify(templates,null,2),'announcement-templates.json','application/json'));
 document.getElementById('tplImport').addEventListener('click',()=>document.getElementById('tplFile').click());
 document.getElementById('tplFile').addEventListener('change',e=>{
-  const f=e.target.files[0]; if(!f) return;
-  const r=new FileReader();
-  r.onload=()=>{ try{
-    const arr=JSON.parse(r.result);
-    if(Array.isArray(arr)){
-      const mode=confirm('按「確定」合併到現有樣板，按「取消」整批取代。');
-      templates = mode ? templates.concat(arr) : arr;
-      persistTpl(); renderTplList(); refreshTplPicker(); flash('匯入完成');
-    } else alert('檔案格式不符。');
-  }catch(_){ alert('無法解析 JSON。'); } e.target.value=''; };
+  const f=e.target.files[0]; if(!f)return; const r=new FileReader();
+  r.onload=()=>{ try{ const arr=JSON.parse(r.result); if(Array.isArray(arr)){ const merge=confirm('按「確定」合併到現有樣板，按「取消」整批取代。'); templates=merge?templates.concat(arr):arr; persistTpl(); renderTplList(); refreshTplPicker(); flash('匯入完成'); } else alert('檔案格式不符。'); }catch(_){alert('無法解析 JSON。');} e.target.value=''; };
   r.readAsText(f);
 });
 
-/* =================== 小工具 =================== */
+/* ============ Excel 匯入 / 匯出 ============ */
+document.getElementById('btnExport').addEventListener('click',()=>{
+  const wb=XLSX.utils.book_new(); const used={};
+  DATA.forEach(m=>{
+    if(!m.items.length) return;
+    const aoa=FIELDS.map(f=>[f, ...m.items.map(it=>{
+      const v=it[f]; if(typeof v==='boolean') return v; return v===undefined||v===null?'':v;
+    })]);
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    let name=String(m.month).replace(/[\[\]\:\*\?\/\\]/g,'').slice(0,31)||'Sheet';
+    while(used[name]) name=(name+'_').slice(0,31); used[name]=1;
+    XLSX.utils.book_append_sheet(wb,ws,name);
+  });
+  const today=new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb,`遊戲內公告集中_${today}.xlsx`);
+  flash('已匯出 Excel');
+});
+document.getElementById('btnImport').addEventListener('click',()=>document.getElementById('xlsxFile').click());
+document.getElementById('xlsxFile').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  if(!confirm('匯入會以這個 Excel 的內容「取代」目前的工作資料（樣板不受影響）。\n建議先用「匯出 Excel」備份。確定匯入？')){ e.target.value=''; return; }
+  flash('讀取中…');
+  const r=new FileReader();
+  r.onload=()=>{ try{
+    const wb=XLSX.read(new Uint8Array(r.result),{type:'array'});
+    const months=[];
+    wb.SheetNames.forEach(sn=>{
+      const ws=wb.Sheets[sn];
+      const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
+      if(!aoa.length) { months.push({month:sn,hidden:false,items:[]}); return; }
+      const labels=aoa.map(row=>row&&row.length?String(row[0]).trim():'');
+      const ncol=Math.max(...aoa.map(r=>r.length),0);
+      const items=[];
+      for(let ci=1;ci<ncol;ci++){
+        const rec={}; let has=false;
+        labels.forEach((lab,ri)=>{ if(!lab) return; let v=aoa[ri][ci]; if(v===undefined)v='';
+          if(lab==='已上正式服'||lab==='測試服公告') v=isTrue(v);
+          else v=(typeof v==='boolean')?v:String(v);
+          rec[lab]=v; if((lab==='標題'||lab==='內文')&&String(v).trim()) has=true; });
+        if(has) items.push(rec);
+      }
+      months.push({month:sn,hidden:(ws['!sheetHidden']?true:false),items});
+    });
+    if(!months.some(m=>m.items.length)){ alert('在這個 Excel 裡找不到公告資料。請確認格式（A 欄為欄位名、每一直行為一則公告）。'); e.target.value=''; return; }
+    DATA=months; saveData(); refreshMonthPickers(); renderArcList(); arcSel=null;
+    document.querySelector('.tab[data-view="archive"]').click();
+    flash('匯入完成：'+months.reduce((n,m)=>n+m.items.length,0)+' 則');
+  }catch(err){ alert('匯入失敗：'+err.message); } e.target.value=''; };
+  r.readAsArrayBuffer(f);
+});
+
+/* ============ 小工具 ============ */
 async function copyText(text,btn){
   try{ await navigator.clipboard.writeText(text); }
   catch(_){ const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
   if(btn){ const o=btn.textContent; btn.textContent='已複製 ✓'; setTimeout(()=>btn.textContent=o,1200); }
 }
-function flash(msg){ const ss=document.getElementById('saveState'); ss.textContent=msg; ss.classList.add('on'); setTimeout(()=>{ss.textContent='';},1800); }
+function downloadBlob(content,name,type){ const b=new Blob([content],{type}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; a.click(); URL.revokeObjectURL(a.href); }
+let flashT=null;
+function flash(msg){ const ss=document.getElementById('saveState'); ss.textContent=msg; ss.classList.add('on'); clearTimeout(flashT); flashT=setTimeout(()=>{ss.textContent='';ss.classList.remove('on');},1800); }
+function flashSaved(){ const ss=document.getElementById('saveState'); ss.textContent='已儲存'; ss.classList.add('on'); clearTimeout(flashT); flashT=setTimeout(()=>{ss.textContent='';ss.classList.remove('on');},1500); }
 
-/* =================== 啟動 =================== */
+/* ============ 啟動 ============ */
 (function init(){
-  let d=null; try{ d=JSON.parse(localStorage.getItem(DRAFT_KEY)); }catch(_){}
-  if(d){ edSource.value=d.source||''; if(d.meta) setMeta(d.meta); }
-  edRender(); refreshTplPicker();
+  refreshMonthPickers(); renderArcList(); refreshTplPicker();
+  setItem({}); edRender();
 })();
 </script>
 </body>
