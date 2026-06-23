@@ -390,7 +390,7 @@ function saveData(){ try{ localStorage.setItem(DATA_KEY, JSON.stringify(DATA)); 
 function monthByName(n){ return DATA.find(m=>m.month===n); }
 
 /* ============ Google Sheet 雲端同步 ============ */
-const WEBAPP_URL='';
+const WEBAPP_URL='https://script.google.com/macros/s/AKfycbwYZtL-8KkKRAdPMmf-DSzFcyiQIF--3tt64ep1tSKLozj6tPziE6167Usno7A5FOKk/exec';
 function cloudOn(){ return /^https?:\/\/.+\/exec/i.test(WEBAPP_URL); }
 
 async function loadFromCloud(loud){
