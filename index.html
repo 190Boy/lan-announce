@@ -169,6 +169,9 @@
       <div class="filters">
         <input type="text" id="arcSearch" placeholder="搜尋標題或內文…">
         <select id="arcMonth"></select>
+        <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink-dim); cursor:pointer; padding:1px 2px;">
+          <input type="checkbox" id="arcUnpubOnly"> 只顯示「已上正式服」未勾選
+        </label>
         <div style="display:flex; gap:6px;">
           <button class="sm ghost" id="arcAddNew" style="flex:1">＋ 在此月份新增公告</button>
           <button class="sm ghost" id="arcReseed" title="捨棄所有編輯，還原成內建的歷史資料">還原內建</button>
@@ -406,10 +409,11 @@ function refreshMonthPickers(){
   const em=document.getElementById('m_month'); const ec=em.value; em.innerHTML=mo; em.value=ec;
 }
 function arcFiltered(){
-  const q=arcSearch.value.trim(), mo=arcMonthSel.value, out=[];
+  const q=arcSearch.value.trim(), mo=arcMonthSel.value, unpub=document.getElementById('arcUnpubOnly').checked, out=[];
   DATA.forEach(m=>{ if(mo&&m.month!==mo) return;
     m.items.forEach((it,idx)=>{
       if(q){ const hay=(it['標題']||'')+'\n'+(it['內文']||''); if(!hay.includes(q)) return; }
+      if(unpub && isTrue(it['已上正式服'])) return;
       out.push({month:m.month,hidden:m.hidden,idx,it});
     });
   });
@@ -463,6 +467,7 @@ function currentArcItem(){ if(!arcSel) return null; const m=monthByName(arcSel.m
 
 arcSearch.addEventListener('input',renderArcList);
 arcMonthSel.addEventListener('change',renderArcList);
+document.getElementById('arcUnpubOnly').addEventListener('change',renderArcList);
 function updateSortUI(){
   document.querySelectorAll('.arc-listhead .sortbtn').forEach(b=>{
     const on=b.dataset.sort===sortState.key;
@@ -565,7 +570,7 @@ document.getElementById('edSave').addEventListener('click',()=>{
   if(editingTpl){
     const t=templates.find(x=>x.id===editingTpl);
     if(!t){ editingTpl=null; setMode(); alert('找不到這個樣板，可能已被刪除。'); return; }
-    t.source=edSource.value; t.meta={'頁籤':val('m_tab'),'連結':val('m_link')};
+    t.source=edSource.value; t.meta={'標題':val('m_title'),'頁籤':val('m_tab'),'連結':val('m_link'),'發布日期':val('m_start'),'結束日期':val('m_end')};
     persistTpl(); refreshTplPicker(); renderTplList(); flash('已更新樣板：'+t.name); return;
   }
   const it=getItem();
@@ -602,12 +607,12 @@ function loadTpl(){ try{return JSON.parse(localStorage.getItem(TPL_KEY))||[];}ca
 function persistTpl(){ try{localStorage.setItem(TPL_KEY,JSON.stringify(templates));}catch(_){} }
 function saveTemplateFromEditor(){
   const name=prompt('樣板名稱：',val('m_title')||'新樣板'); if(!name) return;
-  templates.push({id:Date.now(),name:name.trim(),source:edSource.value,meta:{'頁籤':val('m_tab'),'連結':val('m_link')},default:false});
+  templates.push({id:Date.now(),name:name.trim(),source:edSource.value,meta:{'標題':val('m_title'),'頁籤':val('m_tab'),'連結':val('m_link'),'發布日期':val('m_start'),'結束日期':val('m_end')},default:false});
   persistTpl(); refreshTplPicker(); flash('已存為樣板：'+name);
 }
 function saveTemplateFromItem(it){
   const name=prompt('樣板名稱：',it['標題']||'新樣板'); if(!name) return;
-  templates.push({id:Date.now(),name:name.trim(),source:effectiveSource(it),meta:{'頁籤':it['頁籤']||'','連結':it['連結']||''},default:false});
+  templates.push({id:Date.now(),name:name.trim(),source:effectiveSource(it),meta:{'標題':it['標題']||'','頁籤':it['頁籤']||'','連結':it['連結']||'','發布日期':it['發布日期']||'','結束日期':it['結束日期']||''},default:false});
   persistTpl(); refreshTplPicker(); flash('已存為樣板：'+name);
 }
 function renderTplList(){
@@ -617,7 +622,7 @@ function renderTplList(){
     <div class="hd">${t.default?'<span class="star" title="預設">★</span>':''}<span class="nm">${esc(t.name)}</span></div>
     <div class="snip">${esc((t.source||'').replace(/#\|#/g,' ⏐ ').slice(0,90))}</div>
     <div class="row">
-      <button class="sm" data-act="apply">套用到編輯</button>
+      <button class="sm" data-act="apply">使用樣板</button>
       <button class="sm" data-act="edit">編輯內容</button>
       <button class="sm" data-act="default">${t.default?'取消預設':'設為預設'}</button>
       <button class="sm" data-act="rename">重新命名</button>
@@ -637,14 +642,17 @@ function renderTplList(){
   });
 }
 function applyTemplate(t){
-  if(edSource.value.trim()&&!confirm('用樣板覆蓋目前編輯內容？')) return;
-  arcSel=null; editingRef=null; editingTpl=null; setItem({'頁籤':t.meta&&t.meta['頁籤'],'連結':t.meta&&t.meta['連結'],'內文':t.source||''});
+  if(edSource.value.trim()&&!confirm('使用樣板創建新的公告？')) return;
+  const m=t.meta||{};
+  arcSel=null; editingRef=null; editingTpl=null;
+  setItem({'標題':m['標題'],'頁籤':m['頁籤'],'連結':m['連結'],'發布日期':m['發布日期'],'結束日期':m['結束日期'],'內文':t.source||''});
   edRender(); renderArcList(); activateView('editor');
 }
 function editTemplateContent(t){
   // 進入「編輯這個樣板本身」模式：載進編輯器，按「儲存樣板變更」會覆蓋原樣板
+  const m=t.meta||{};
   arcSel=null; editingRef=null; editingTpl=t.id;
-  setItem({'頁籤':t.meta&&t.meta['頁籤'],'連結':t.meta&&t.meta['連結'],'內文':t.source||''});
+  setItem({'標題':m['標題'],'頁籤':m['頁籤'],'連結':m['連結'],'發布日期':m['發布日期'],'結束日期':m['結束日期'],'內文':t.source||''});
   edRender(); renderArcList(); activateView('editor');
 }
 function refreshTplPicker(){
