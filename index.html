@@ -363,7 +363,7 @@ function monthByName(n){ return DATA.find(m=>m.month===n); }
 
 /* ============ Google Sheet 雲端同步（Apps Script 網頁應用程式） ============ */
 // ★ 把你部署好的 Apps Script「網頁應用程式」/exec 網址貼在這裡：
-const WEBAPP_URL='https://script.google.com/macros/s/AKfycbwYZtL-8KkKRAdPMmf-DSzFcyiQIF--3tt64ep1tSKLozj6tPziE6167Usno7A5FOKk/exec';   // 例：https://script.google.com/macros/s/AKfycb..../exec
+const WEBAPP_URL='';   // 例：https://script.google.com/macros/s/AKfycb..../exec
 function cloudOn(){ return /^https?:\/\/.+\/exec/i.test(WEBAPP_URL); }
 
 // 讀取：GET 網頁應用程式 → { months:[{month,hidden,items:[...]}] }
@@ -620,7 +620,18 @@ document.getElementById('edSave').addEventListener('click',()=>{
   }
   const it=getItem();
   if(editingRef){
-    monthByName(editingRef.month).items[editingRef.idx]=it; saveData(); flash('已儲存變更'); renderArcList();
+    const newMo=val('m_month');
+    if(newMo && newMo!=='__new__' && newMo!==editingRef.month){
+      const dst=monthByName(newMo); if(!dst){ alert('找不到目標月份。'); return; }
+      const src=monthByName(editingRef.month);
+      src.items.splice(editingRef.idx,1);          // 從原月份移除
+      dst.items.push(it);                          // 加到新月份
+      editingRef={month:newMo,idx:dst.items.length-1};
+      arcSel={month:newMo,idx:dst.items.length-1}; // 選取跟著移動
+      saveData(); flash('已移至 '+newMo+' 並儲存'); refreshMonthPickers(); renderArcList(); setMode();
+    }else{
+      monthByName(editingRef.month).items[editingRef.idx]=it; saveData(); flash('已儲存變更'); renderArcList();
+    }
   }else{
     const mo=val('m_month'); if(!mo||mo==='__new__'){ alert('請先選擇「所屬月份」。'); return; }
     const m=monthByName(mo); if(!m){ alert('找不到月份。'); return; }
