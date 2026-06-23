@@ -91,6 +91,8 @@
   .arc-card .ac-times{text-align:right; white-space:nowrap; font-size:11.5px; color:var(--ink-dim); line-height:1.6; flex-shrink:0;}
   .arc-card .ac-times .lbl{color:var(--ink-faint); margin-right:5px; font-size:10.5px;}
   .arc-card .ac-times .e{color:var(--ink-faint);}
+  .arc-card .ac-actions{display:flex; gap:6px; flex-shrink:0; opacity:.35; transition:opacity .12s;}
+  .arc-card:hover .ac-actions, .arc-card.sel .ac-actions{opacity:1;}
   .badge{font-size:10px; padding:1px 7px; border-radius:20px; border:1px solid var(--line); color:var(--ink-dim);}
   .badge.tab{border-color:var(--blue); color:#8fa9d6;}
   .dot{width:7px; height:7px; border-radius:50%; display:inline-block;}
@@ -151,6 +153,7 @@
       <button class="tab" data-view="editor">編輯公告</button>
       <button class="tab" data-view="templates">樣板</button>
     </div>
+    <button id="navNew" class="primary" style="margin-left:8px">＋ 開新公告</button>
     <span class="grow"></span>
     <div class="io">
       <button id="btnImport">匯入 Excel</button>
@@ -187,10 +190,6 @@
     <main class="arc-main">
       <div class="detail-head">
         <span class="title" id="arcTitle">選擇左側一則公告</span>
-        <button class="sm" id="arcToggle">顯示原始碼</button>
-        <button class="sm" id="arcCopy">全部複製</button>
-        <button class="sm" id="arcEdit">編輯此則</button>
-        <button class="sm danger" id="arcDel">刪除</button>
       </div>
       <div class="preview-wrap">
         <div class="mockup" id="arcMock">
@@ -199,7 +198,6 @@
           <div class="g-sub">L I G H T &nbsp; A N D &nbsp; N I G H T</div>
           <div class="pv" id="arcPreview"><div class="pv-empty">尚未選擇公告</div></div>
         </div>
-        <div class="code-box" id="arcCodeBox" hidden><textarea id="arcCode" readonly spellcheck="false"></textarea></div>
       </div>
       <div class="detail-meta" id="arcMeta"></div>
     </main>
@@ -364,6 +362,7 @@ document.querySelectorAll('.tab').forEach(tab=>{
     if(v==='templates') renderTplList();
   });
 });
+document.getElementById('navNew').addEventListener('click',()=>newAnnouncement());
 
 /* ============ 歷史公告 ============ */
 let arcSel=null; // {month, idx}
@@ -421,13 +420,23 @@ function renderArcList(){
           ${isTrue(it['測試服公告'])?'<span class="dot test" title="測試服公告"></span>':''}
         </div>
       </div>
+      <div class="ac-actions">
+        <button class="sm" data-act="edit">編輯</button>
+        <button class="sm danger" data-act="del">刪除</button>
+      </div>
       <div class="ac-times">
         <div><span class="lbl">開始</span>${esc(start)}</div>
         <div class="e"><span class="lbl">結束</span>${esc(end)}</div>
       </div>
     </div>`;
   }).join('');
-  [...arcListEl.children].forEach(c=>{ if(c.dataset.i!==undefined) c.addEventListener('click',()=>selectArc(list[+c.dataset.i])); });
+  [...arcListEl.children].forEach(c=>{
+    if(c.dataset.i===undefined) return;
+    const r=list[+c.dataset.i];
+    c.addEventListener('click',()=>selectArc(r));
+    c.querySelector('[data-act="edit"]').addEventListener('click',e=>{ e.stopPropagation(); loadIntoEditor(r.month,r.idx); });
+    c.querySelector('[data-act="del"]').addEventListener('click',e=>{ e.stopPropagation(); deleteAnnouncement(r.month,r.idx); });
+  });
 }
 function selectArc(r){
   arcSel={month:r.month,idx:r.idx};
@@ -436,7 +445,6 @@ function selectArc(r){
   document.getElementById('arcTitle').textContent=it['標題']||'（無標題）';
   const src=effectiveSource(it);
   renderGame(document.getElementById('arcPreview'),document.getElementById('arcGTitle'),src,it['標題']);
-  document.getElementById('arcCode').value=src;
   const fields=[['月份',r.month],['頁籤',it['頁籤']],['發布',it['發布日期']],['結束',it['結束日期']],['連結',it['連結']],['ID',it['ＩＤ']]];
   document.getElementById('arcMeta').innerHTML=fields.filter(f=>f[1]&&String(f[1]).trim()).map(f=>`<span><b>${f[0]}</b> ${esc(String(f[1]))}</span>`).join('');
 }
@@ -459,22 +467,19 @@ document.querySelectorAll('.arc-listhead .sortbtn').forEach(b=>{
     updateSortUI(); renderArcList();
   });
 });
-document.getElementById('arcToggle').addEventListener('click',e=>{
-  const box=document.getElementById('arcCodeBox'), mock=document.getElementById('arcMock');
-  const showCode=box.hasAttribute('hidden');
-  box.toggleAttribute('hidden',!showCode); mock.style.display=showCode?'none':'flex';
-  e.currentTarget.textContent=showCode?'顯示預覽':'顯示原始碼';
-});
-document.getElementById('arcCopy').addEventListener('click',e=>{ const it=currentArcItem(); if(it) copyText(effectiveSource(it),e.currentTarget); });
-document.getElementById('arcEdit').addEventListener('click',()=>{ if(arcSel) loadIntoEditor(arcSel.month,arcSel.idx); });
-document.getElementById('arcDel').addEventListener('click',()=>{
-  const it=currentArcItem(); if(!it) return;
+function deleteAnnouncement(month,idx){
+  const m=monthByName(month); if(!m) return;
+  const it=m.items[idx];
   if(!confirm('刪除這則公告？\n「'+(it['標題']||'')+'」')) return;
-  monthByName(arcSel.month).items.splice(arcSel.idx,1); arcSel=null; saveData(); refreshMonthPickers(); renderArcList();
-  document.getElementById('arcTitle').textContent='選擇左側一則公告';
-  renderGame(document.getElementById('arcPreview'),document.getElementById('arcGTitle'),'','');
-  document.getElementById('arcMeta').innerHTML='';
-});
+  m.items.splice(idx,1);
+  if(arcSel&&arcSel.month===month&&arcSel.idx===idx){
+    arcSel=null;
+    document.getElementById('arcTitle').textContent='選擇左側一則公告';
+    renderGame(document.getElementById('arcPreview'),document.getElementById('arcGTitle'),'','');
+    document.getElementById('arcMeta').innerHTML='';
+  }
+  saveData(); refreshMonthPickers(); renderArcList();
+}
 document.getElementById('arcAddNew').addEventListener('click',()=>{
   const mo=arcMonthSel.value; if(!mo){ alert('請先在上方選一個月份，再新增公告。'); return; }
   document.getElementById('m_month').value=mo; newAnnouncement(mo);
