@@ -504,6 +504,7 @@ document.getElementById('arcReseed').addEventListener('click',()=>{
 const edSource=document.getElementById('edSource');
 const edPreview=document.getElementById('edPreview');
 let editingRef=null; // {month, idx} 或 null=新公告
+let editingTpl=null; // 正在編輯的樣板 id，或 null（一般公告編輯）
 
 function val(id){return document.getElementById(id).value;}
 function getItem(){
@@ -525,7 +526,8 @@ function setItem(it){
 }
 function setMode(){
   const el=document.getElementById('edMode'), btn=document.getElementById('edSave');
-  if(editingRef){ el.textContent='編輯：'+editingRef.month+' / '+(val('m_title')||'（無標題）'); btn.textContent='儲存變更'; }
+  if(editingTpl){ const t=templates.find(x=>x.id===editingTpl); el.textContent='編輯樣板：'+(t?t.name:'（已刪除）'); btn.textContent='儲存樣板變更'; }
+  else if(editingRef){ el.textContent='編輯：'+editingRef.month+' / '+(val('m_title')||'（無標題）'); btn.textContent='儲存變更'; }
   else { el.textContent='新公告'; btn.textContent='新增到此月份'; }
 }
 function edRender(){
@@ -541,7 +543,7 @@ edSource.addEventListener('input',edRender);
 
 function populateEditor(month,idx){
   const it=monthByName(month).items[idx];
-  editingRef={month,idx}; setItem(it);
+  editingTpl=null; editingRef={month,idx}; setItem(it);
   document.getElementById('m_month').value=month;
   edRender();
 }
@@ -549,7 +551,7 @@ function loadIntoEditor(month,idx){
   arcSel={month,idx}; populateEditor(month,idx); renderArcList(); activateView('editor');
 }
 function newAnnouncement(month){
-  arcSel=null; editingRef=null; setItem({}); if(month) document.getElementById('m_month').value=month;
+  arcSel=null; editingRef=null; editingTpl=null; setItem({}); if(month) document.getElementById('m_month').value=month;
   edRender(); renderArcList(); activateView('editor');
 }
 document.getElementById('m_month').addEventListener('change',e=>{
@@ -560,6 +562,12 @@ document.getElementById('m_month').addEventListener('change',e=>{
   }
 });
 document.getElementById('edSave').addEventListener('click',()=>{
+  if(editingTpl){
+    const t=templates.find(x=>x.id===editingTpl);
+    if(!t){ editingTpl=null; setMode(); alert('找不到這個樣板，可能已被刪除。'); return; }
+    t.source=edSource.value; t.meta={'頁籤':val('m_tab'),'連結':val('m_link')};
+    persistTpl(); refreshTplPicker(); renderTplList(); flash('已更新樣板：'+t.name); return;
+  }
   const it=getItem();
   if(editingRef){
     monthByName(editingRef.month).items[editingRef.idx]=it; saveData(); flash('已儲存變更'); renderArcList();
@@ -610,6 +618,7 @@ function renderTplList(){
     <div class="snip">${esc((t.source||'').replace(/#\|#/g,' ⏐ ').slice(0,90))}</div>
     <div class="row">
       <button class="sm" data-act="apply">套用到編輯</button>
+      <button class="sm" data-act="edit">編輯內容</button>
       <button class="sm" data-act="default">${t.default?'取消預設':'設為預設'}</button>
       <button class="sm" data-act="rename">重新命名</button>
       <button class="sm danger" data-act="del">刪除</button>
@@ -620,15 +629,22 @@ function renderTplList(){
     card.querySelectorAll('button[data-act]').forEach(btn=>btn.addEventListener('click',()=>{
       const act=btn.dataset.act;
       if(act==='apply') applyTemplate(t);
+      else if(act==='edit') editTemplateContent(t);
       else if(act==='default'){ const on=!t.default; templates.forEach(x=>x.default=false); t.default=on; persistTpl(); renderTplList(); refreshTplPicker(); }
-      else if(act==='rename'){ const n=prompt('新名稱：',t.name); if(n){t.name=n.trim(); persistTpl(); renderTplList(); refreshTplPicker();} }
-      else if(act==='del'){ if(confirm('刪除樣板「'+t.name+'」？')){ templates=templates.filter(x=>x.id!==t.id); if(tplSel&&tplSel.id===t.id)tplSel=null; persistTpl(); renderTplList(); refreshTplPicker(); } }
+      else if(act==='rename'){ const n=prompt('新名稱：',t.name); if(n){t.name=n.trim(); persistTpl(); renderTplList(); refreshTplPicker(); if(editingTpl===t.id)setMode();} }
+      else if(act==='del'){ if(confirm('刪除樣板「'+t.name+'」？')){ templates=templates.filter(x=>x.id!==t.id); if(tplSel&&tplSel.id===t.id)tplSel=null; if(editingTpl===t.id)editingTpl=null; persistTpl(); renderTplList(); refreshTplPicker(); setMode(); } }
     }));
   });
 }
 function applyTemplate(t){
   if(edSource.value.trim()&&!confirm('用樣板覆蓋目前編輯內容？')) return;
-  arcSel=null; editingRef=null; setItem({'頁籤':t.meta&&t.meta['頁籤'],'連結':t.meta&&t.meta['連結'],'內文':t.source||''});
+  arcSel=null; editingRef=null; editingTpl=null; setItem({'頁籤':t.meta&&t.meta['頁籤'],'連結':t.meta&&t.meta['連結'],'內文':t.source||''});
+  edRender(); renderArcList(); activateView('editor');
+}
+function editTemplateContent(t){
+  // 進入「編輯這個樣板本身」模式：載進編輯器，按「儲存樣板變更」會覆蓋原樣板
+  arcSel=null; editingRef=null; editingTpl=t.id;
+  setItem({'頁籤':t.meta&&t.meta['頁籤'],'連結':t.meta&&t.meta['連結'],'內文':t.source||''});
   edRender(); renderArcList(); activateView('editor');
 }
 function refreshTplPicker(){
