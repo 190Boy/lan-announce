@@ -10,6 +10,8 @@
 | `archive.js` | 內建歷史公告資料，`window.ARCHIVE = {months:[...]}`（約 793KB，672 則） | **大檔，不要讀進對話** |
 | `xlsx.full.min.js` | SheetJS 0.18.5，Excel 讀寫用（已在地化，離線可用，約 864KB） | **大檔，不要讀進對話** |
 
+另有一個放在 repo 根目錄、供開頁載入用的 `announcement-templates.json`（樣板來源，見「資料模型」與「樣板」段）。
+
 > 維護提醒：改功能只需動 `index.html`，且盡量用小範圍修改（str_replace），不要把上面兩個大檔印出來或整檔重貼，否則 token 會飆高。
 
 ## 公告原始碼格式（與遊戲內一致，務必沿用此解析邏輯）
@@ -27,7 +29,7 @@
 - 首次載入由 `archive.js` 的內建資料種入；「還原內建」可捨棄編輯重設。
 - 每則公告欄位：`發布日期、結束日期、標題、頁籤、內文、圖素、連結、ＩＤ、順位、已上正式服(bool)、測試服公告(bool)`。
 - 「內文」= 公告原始碼。若「內文」為空但「圖素」有網址，預覽改用圖素當純圖片公告。
-- 樣板存在 `localStorage`（key `gh_ann_templates_v1`）。
+- 樣板存在 `localStorage`（key `gh_ann_templates_v1`）；**開頁時會自動從 GitHub 拉最新樣板覆蓋本機**（見下）。
 
 ## 功能規格（目前狀態）
 
@@ -59,6 +61,9 @@
 - 用目前編輯內容建立樣板、命名、設為預設（★，新公告下拉排最前）、重新命名、刪除。
 - 匯出全部／匯入（合併或取代）成 JSON，供備份或團隊共用。
 - 左側清單、右側樣板預覽（米白樣式）。
+- **開頁自動從 GitHub 讀取樣板**：每次開頁會由 `loadTemplatesFromGitHub()` 去抓 `https://raw.githubusercontent.com/190Boy/lan-announce/main/announcement-templates.json`（帶 `?t=` 破快取），成功就以 repo 內容**覆蓋**本機樣板並重繪清單與下拉；失敗（離線、檔案不存在等）則靜默沿用本機 localStorage 的樣板，不跳錯誤。
+  - 因此「只存在本機、尚未上傳到 repo」的樣板，開頁後會被覆蓋而不顯示；要保留請先用「匯出全部」並 commit 回 repo。
+  - 團隊共用樣板的標準流程：在工具裡編好 → 匯出 JSON → commit 成 repo 根目錄的 `announcement-templates.json`，其他人開頁即同步到最新。
 
 ### Excel 匯入／匯出
 - 格式：直向轉置 —— 每個工作表 = 一個月份（表名＝月份代號如 `2608`），A 欄為欄位名，每一直行為一則公告。
@@ -67,7 +72,10 @@
 
 ## 已知限制／注意
 
-- 資料與樣板存在本機瀏覽器，**不跨裝置同步**；團隊共用靠匯出/匯入 Excel（資料）與樣板 JSON。
+- 公告資料（`DATA`）存在本機瀏覽器，**不跨裝置同步**；團隊共用靠匯出/匯入 Excel。
+- 樣板開頁會單向從 GitHub 拉取（唯讀），repo 上的 `announcement-templates.json` 是團隊共用來源；本機改動不會自動寫回 repo，需手動匯出並 commit。
+- 第一次使用前要先把 `announcement-templates.json` commit 到 repo 根目錄（`190Boy/lan-announce` 的 `main`），否則開頁抓不到、沿用本機（可能為空）。
+- `raw.githubusercontent.com` 有 CDN 快取，更新 JSON 後可能要等幾分鐘才會抓到新內容（程式已加 `?t=` 時間戳緩解）。
 - 圖片來源為 `backend.tw.gamehours.com`，未連 VPN 時預覽會顯示「圖片載入失敗」提示，屬正常。
 - `archive.js` 為某次 Excel 的快照；要更新歷史，重新產生 `archive.js` 或直接用「匯入 Excel」。
 - 時間目前照 Excel 原始值顯示（可能帶到秒）。

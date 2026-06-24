@@ -824,6 +824,21 @@ document.getElementById('tplFile').addEventListener('change',e=>{
   r.readAsText(f);
 });
 
+/* ============ 從 GitHub 載入樣板（開頁自動讀取） ============ */
+async function loadTemplatesFromGitHub(){
+  const url='https://raw.githubusercontent.com/190Boy/lan-announce/main/announcement-templates.json?t='+Date.now();
+  try{
+    const res=await fetch(url,{cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const arr=JSON.parse(await res.text());
+    if(!Array.isArray(arr)) throw new Error('格式不符');
+    templates=arr; persistTpl(); renderTplList(); refreshTplPicker();
+    flash('已從 GitHub 載入 '+arr.length+' 個樣板');
+  }catch(err){
+    console.error('讀取 GitHub 樣板失敗，沿用本機：',err);
+  }
+}
+
 /* ============ Excel 匯入 / 匯出 ============ */
 document.getElementById('btnExport').addEventListener('click',()=>{
   const wb=XLSX.utils.book_new(); const used={};
@@ -896,6 +911,7 @@ function flashSaved(){ const ss=document.getElementById('saveState'); ss.textCon
   refreshMonthPickers(); updateSortUI(); renderArcList(); refreshTplPicker();
   setItem({}); edRender();
   loadFromCloud(false); 
+  loadTemplatesFromGitHub();
 })();
 </script>
 </body>
